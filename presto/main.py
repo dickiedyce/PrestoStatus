@@ -25,7 +25,7 @@ from presto import Presto
 # ---------------------------------------------------------------------------
 
 SERVER_PORT = 8080
-POLL_INTERVAL = 5       # seconds between server polls
+POLL_INTERVAL = 30  # seconds between server polls
 MAX_DISPLAY = 10        # max notifications to fetch
 
 HEADER_HEIGHT = 52
@@ -475,16 +475,17 @@ def main():
     max_scroll = max(0, total_height - visible_height)
 
     # -- Main event loop --
-    touch = presto.touch
     while True:
         now = time.time()
 
         # --- Touch input ---
-        touch.poll()
-        tx = touch.x
-        ty = touch.y
+        # Must poll explicitly — presto.update() re-polls at end of frame,
+        # but our state read at the top of the loop needs fresh data.
+        presto.touch_poll()
+        tx = presto.touch.x
+        ty = presto.touch.y
 
-        if touch.state:
+        if presto.touch.state:
             in_btn = (MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
                       MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H)
             # Toggle mode: only fire once on initial press
