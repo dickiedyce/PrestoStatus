@@ -222,16 +222,16 @@ def draw_header():
     display.set_pen(WHITE)
     vector.text("PrestoStatus", 12, 34)
 
-    # Clock -- top right
+    # Clock -- top right (BST = UTC+1)
     try:
-        t = time.localtime()
+        t = time.localtime(time.time() + 3600)
         time_str = "{:02d}:{:02d}".format(t[3], t[4])
     except Exception:
         time_str = "--:--"
-    vector.set_font("Roboto-Medium.af", 20)
+    vector.set_font("Roboto-Medium.af", 28)
     _, _, tw, _ = vector.measure_text(time_str, x=0, y=0)
     display.set_pen(MUTED)
-    vector.text(time_str, WIDTH - int(tw) - 12, 34)
+    vector.text(time_str, WIDTH - int(tw) - 12, 38)
 
     # Bottom border
     display.set_pen(SEPARATOR)
@@ -270,7 +270,7 @@ def draw_card(n, y, accent_colour):
 
     # Relative time -- drawn first at top-right
     rel = relative_time(n.get("timestamp", 0))
-    vector.set_font("Roboto-Medium.af", 12)
+    vector.set_font("Roboto-Medium.af", 14)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     _, _, tw, _ = vector.measure_text(rel, x=0, y=0)
@@ -281,7 +281,7 @@ def draw_card(n, y, accent_colour):
     title = n.get("title", "Unknown")
     if len(title) > 26:
         title = title[:24] + "..."
-    vector.set_font("Roboto-Medium.af", 15)
+    vector.set_font("Roboto-Medium.af", 17)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     display.set_pen(WHITE)
@@ -450,30 +450,25 @@ def main():
         now = time.time()
 
         # --- Touch input ---
-        presto.touch_poll()
-        tx = presto.touch.x
-        ty = presto.touch.y
-        touched = presto.touch.state
+        touch = presto.touch
+        touch.poll()
+        touched = touch.state
+        ty = touch.y
 
-        if touched and touch_prev_state:
-            # Dragging
+        if touched:
             if last_touch_y is not None:
-                delta = last_touch_y - ty  # inverted: drag up = scroll down
-                scroll_target += delta * 1.5
-                scroll_target = max(0, min(scroll_target, max_scroll))
+                delta = last_touch_y - ty
+                if abs(delta) > 0:
+                    scroll_target += delta * 1.5
+                    scroll_target = max(0, min(scroll_target, max_scroll))
             last_touch_y = ty
-        elif touched and not touch_prev_state:
-            # Touch started
-            last_touch_y = ty
-        elif not touched and touch_prev_state:
-            # Touch ended
+        else:
             last_touch_y = None
 
-        touch_prev_state = touched
-
         # --- Smooth scroll lerp ---
-        scroll_y += (scroll_target - scroll_y) * 0.3
-        if abs(scroll_target - scroll_y) < 0.5:
+        if abs(scroll_target - scroll_y) > 0.5:
+            scroll_y += (scroll_target - scroll_y) * 0.4
+        else:
             scroll_y = scroll_target
 
         # --- Periodic poll ---
