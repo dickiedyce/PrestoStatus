@@ -107,7 +107,7 @@ server_host = None    # hostname from secrets.py
 # Light/dark mode
 DARK_MODE = False
 MODE_BTN_Y = 10
-MODE_BTN_X = WIDTH - 50
+MODE_BTN_X = 12
 MODE_BTN_W = 38
 MODE_BTN_H = 30
 
@@ -223,11 +223,24 @@ def draw_header():
     display.set_pen(HEADER_BG)
     display.rectangle(0, 0, WIDTH, HEADER_HEIGHT)
 
+    # Mode toggle button (top-left)
+    btn_label = "L" if DARK_MODE else "D"
+    display.set_pen(SEPARATOR)
+    display.rectangle(MODE_BTN_X, MODE_BTN_Y, MODE_BTN_W, MODE_BTN_H)
+    vector.set_font("Roboto-Medium.af", 18)
+    vector.set_font_letter_spacing(100)
+    vector.set_font_word_spacing(100)
+    _, _, bw, bh = vector.measure_text(btn_label, x=0, y=0)
+    display.set_pen(WHITE)
+    vector.text(btn_label, MODE_BTN_X + (MODE_BTN_W - int(bw)) // 2,
+                MODE_BTN_Y + (MODE_BTN_H + int(bh)) // 2)
+
+    # Title -- to the right of toggle
     vector.set_font("Roboto-Medium.af", 20)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     display.set_pen(WHITE)
-    vector.text("PrestoStatus", 12, 34)
+    vector.text("PrestoStatus", MODE_BTN_X + MODE_BTN_W + 8, 34)
 
     # Clock -- top right (BST = UTC+1)
     try:
@@ -239,16 +252,6 @@ def draw_header():
     _, _, tw, _ = vector.measure_text(time_str, x=0, y=0)
     display.set_pen(MUTED)
     vector.text(time_str, WIDTH - int(tw) - 12, 38)
-
-    # Mode toggle button (bottom-right of header area)
-    btn_label = "L" if DARK_MODE else "D"
-    display.set_pen(SEPARATOR)
-    display.rectangle(MODE_BTN_X, MODE_BTN_Y, MODE_BTN_W, MODE_BTN_H)
-    vector.set_font("Roboto-Medium.af", 18)
-    _, _, bw, bh = vector.measure_text(btn_label, x=0, y=0)
-    display.set_pen(WHITE)
-    vector.text(btn_label, MODE_BTN_X + (MODE_BTN_W - int(bw)) // 2,
-                MODE_BTN_Y + (MODE_BTN_H + int(bh)) // 2)
 
     # Bottom border
     display.set_pen(SEPARATOR)
@@ -292,13 +295,13 @@ def draw_card(n, y, accent_colour):
     # Title row at top of card
     title_y = int(y) + CARD_PADDING_Y + 16
 
-    # Relative time -- drawn first at top-right
+    # Notification time -- same size and colour as title, dark grey
     rel = relative_time(n.get("timestamp", 0))
-    vector.set_font("Roboto-Medium.af", 18)
+    vector.set_font("Roboto-Medium.af", 28)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     _, _, tw, _ = vector.measure_text(rel, x=0, y=0)
-    display.set_pen(card_muted_pen)
+    display.set_pen(card_text if DARK_MODE else display.create_pen(80, 80, 80))
     vector.text(rel, card_x + card_w - CARD_PADDING_X - int(tw), title_y)
 
     # Title (sender/app name) -- left of time, right of dot
@@ -471,25 +474,22 @@ def main():
     max_scroll = max(0, total_height - visible_height)
 
     # -- Main event loop --
+    touch = presto.touch
     while True:
         now = time.time()
 
         # --- Touch input ---
-        touch = presto.touch
         touch.poll()
-        touched = touch.state
         tx = touch.x
         ty = touch.y
 
-        if touched:
-            # Check for mode toggle button tap
-            if (last_touch_y is None and
-                MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
-                MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H):
+        if touch.state:
+            # Mode toggle: tap in the button area while not scrolling
+            if last_touch_y is None and MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H:
                 DARK_MODE = not DARK_MODE
             elif last_touch_y is not None:
                 delta = last_touch_y - ty
-                if abs(delta) > 2:
+                if delta != 0:
                     scroll_y = max(0, min(scroll_y + delta, max_scroll))
             last_touch_y = ty
         else:

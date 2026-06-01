@@ -86,6 +86,11 @@ def read_notifications(limit: int = MAX_NOTIFICATIONS) -> list[dict]:
                     # title/body live inside the 'req' sub-dict
                     title = req.get("titl", "") or req.get("title", "")
                     body = req.get("body", "")
+                    # body can be a list of strings — join them
+                    if isinstance(body, list):
+                        body = " ".join(str(b) for b in body)
+                    title = str(title)
+                    body = str(body)
                     # Fallback: derive a readable name from the bundle ID
                     if not title:
                         title = app_identifier.rsplit(".", 1)[-1]
