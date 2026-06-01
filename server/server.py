@@ -24,6 +24,7 @@ DB_PATH = os.path.expanduser(
 )
 SERVER_PORT = 8080
 MAX_NOTIFICATIONS = 10
+MAX_AGE_HOURS = 24   # only return notifications from the last N hours
 POLL_INTERVAL = 2  # seconds
 
 # ---------------------------------------------------------------------------
@@ -51,16 +52,23 @@ def read_notifications(limit: int = MAX_NOTIFICATIONS) -> list[dict]:
         return []
 
     try:
+        # CFAbsoluteTime window: from N hours ago to 2 hours from now.
+        # The upper bound excludes future calendar invitations (which have
+        # delivered_date set to the event date, not when they were shown).
+        now_cfa = time.time() - CFA_INTERVAL
+        cutoff_past = now_cfa - (MAX_AGE_HOURS * 3600)
+        cutoff_future = now_cfa + (2 * 3600)
         cursor = conn.execute(
             """
             SELECT a.identifier, r.uuid, r.data, r.delivered_date
             FROM record r
             JOIN app a ON r.app_id = a.app_id
-            WHERE r.presented = 1
+            WHERE r.delivered_date > ?
+              AND r.delivered_date < ?
             ORDER BY r.delivered_date DESC
             LIMIT ?
             """,
-            (limit,),
+            (cutoff_past, cutoff_future, limit),
         )
 
         notifications: list[dict] = []
