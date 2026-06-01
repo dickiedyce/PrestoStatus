@@ -111,6 +111,35 @@ MODE_BTN_W = 42
 MODE_BTN_H = 36
 _mode_touched = False  # debounce: only toggle on first touch
 
+# ---------------------------------------------------------------------------
+# Raw FT6236 I2C touch reader (bypasses driver's poll/reset cycle)
+# ---------------------------------------------------------------------------
+from machine import I2C, Pin
+_touch_i2c = I2C(1, sda=Pin(30), scl=Pin(31))
+_TOUCH_ADDR = 0x48
+_touch_buf = bytearray(16)
+
+STATE_NONE = 3
+STATE_UP = 1
+
+
+def read_touch():
+    """Read FT6236 directly via I2C, returns (x, y, touched).
+    Bypasses the driver to avoid the poll/reset race with presto.update()."""
+    try:
+        _touch_i2c.readfrom_into(_TOUCH_ADDR, _touch_buf)
+    except OSError:
+        return 0, 0, False
+    touches = _touch_buf[2] & 0x0F
+    if touches == 0:
+        return 0, 0, False
+    # First touch at bytes 3..6: xh(event)|xl, yh|yl
+    x = ((_touch_buf[3] & 0x0F) << 8) | _touch_buf[4]
+    y = ((_touch_buf[5] & 0x0F) << 8) | _touch_buf[6]
+    event = _touch_buf[3] >> 6
+    touched = event != STATE_NONE and event != STATE_UP
+    return x, y, touched
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -477,14 +506,10 @@ def main():
     while True:
         now = time.time()
 
-        # --- Touch input ---
-        # Must poll explicitly — presto.update() re-polls at end of frame,
-        # but our state read at the top of the loop needs fresh data.
-        presto.touch_poll()
-        tx = presto.touch.x
-        ty = presto.touch.y
+        # --- Touch input (direct I2C read, no driver involvement) ---
+        tx, ty, touched = read_touch()
 
-        if presto.touch.state:
+        if touched:
             in_btn = (MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
                       MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H)
             # Toggle mode: only fire once on initial press
