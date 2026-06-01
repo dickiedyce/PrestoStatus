@@ -94,7 +94,6 @@ def app_dot_pen(bundle_id):
 
 notifs = []           # current notification list
 scroll_y = 0.0        # current scroll offset
-scroll_target = 0.0   # target scroll offset (lerped)
 max_scroll = 0.0      # calculated from content
 server_ok = False     # server reachable last poll
 wifi_ok = False       # WiFi connected
@@ -400,7 +399,7 @@ def draw_status(scr):
 # ---------------------------------------------------------------------------
 
 def main():
-    global notifs, scroll_y, scroll_target, max_scroll
+    global notifs, scroll_y, max_scroll
     global server_ok, wifi_ok, last_touch_y, touch_prev_state, server_url
 
     # -- LED startup indicator --
@@ -517,7 +516,6 @@ def main():
         total_height = sum(calc_card_height(n) for n in notifs) + CARD_SPACING * max(0, len(notifs) - 1)
         visible_height = HEIGHT - HEADER_HEIGHT
         max_scroll = max(0, total_height - visible_height)
-        scroll_target = max(0, min(scroll_target, max_scroll))
 
         # --- Draw ---
         if not notifs and not server_ok:
@@ -528,13 +526,7 @@ def main():
             draw_notifs()
 
         draw_header()
-        # Push framebuffer to display. We don't use presto.update() because
-        # its internal touch.poll() would double-poll and consume touch state.
-        presto.presto.update(presto.display)
-        # Single touch.poll() at TOP of next frame handles everything.
-
-        # --- Yield ---
-        time.sleep_ms(50)
+        presto.update()
 
 
 # ---------------------------------------------------------------------------
