@@ -1,0 +1,4 @@
+server/__pycache__/
+*.pyc
+.DS_Store
+presto/secrets.py
