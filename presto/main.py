@@ -281,7 +281,7 @@ def draw_card(n, y, accent_colour):
     title = n.get("title", "Unknown")
     if len(title) > 26:
         title = title[:24] + "..."
-    vector.set_font("Roboto-Medium.af", 17)
+    vector.set_font("Roboto-Medium.af", 28)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     display.set_pen(WHITE)
@@ -291,12 +291,12 @@ def draw_card(n, y, accent_colour):
     text_y = title_y + LINE_HEIGHT_APP + 2
     body = n.get("body", "")
     if body:
-        vector.set_font("Roboto-Medium.af", 14)
+        vector.set_font("Roboto-Medium.af", 18)
         vector.set_font_letter_spacing(100)
         vector.set_font_word_spacing(100)
         display.set_pen(WHITE)
         text_x = card_x + CARD_PADDING_X + 16
-        max_chars = 42  # ~42 chars at size 14 on 480px wide
+        max_chars = 34  # ~34 chars at size 18 on 480px wide
         line_count = 0
         while body and line_count < 3:
             if len(body) <= max_chars:
