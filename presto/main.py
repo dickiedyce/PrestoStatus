@@ -219,7 +219,7 @@ def fetch_notifications():
 # ---------------------------------------------------------------------------
 
 def draw_header():
-    """Draw the fixed header bar with title and clock."""
+    """Draw the fixed header bar with title, clock, and mode toggle."""
     display.set_pen(HEADER_BG)
     display.rectangle(0, 0, WIDTH, HEADER_HEIGHT)
 
@@ -239,6 +239,16 @@ def draw_header():
     _, _, tw, _ = vector.measure_text(time_str, x=0, y=0)
     display.set_pen(MUTED)
     vector.text(time_str, WIDTH - int(tw) - 12, 38)
+
+    # Mode toggle button (bottom-right of header area)
+    btn_label = "L" if DARK_MODE else "D"
+    display.set_pen(SEPARATOR)
+    display.rectangle(MODE_BTN_X, MODE_BTN_Y, MODE_BTN_W, MODE_BTN_H)
+    vector.set_font("Roboto-Medium.af", 18)
+    _, _, bw, bh = vector.measure_text(btn_label, x=0, y=0)
+    display.set_pen(WHITE)
+    vector.text(btn_label, MODE_BTN_X + (MODE_BTN_W - int(bw)) // 2,
+                MODE_BTN_Y + (MODE_BTN_H + int(bh)) // 2)
 
     # Bottom border
     display.set_pen(SEPARATOR)
@@ -263,8 +273,15 @@ def draw_card(n, y, accent_colour):
     card_x = 8
     card_w = WIDTH - 16
 
-    # Card background -- inverted (white)
-    display.set_pen(WHITE)
+    # Card background -- light or dark depending on mode
+    if DARK_MODE:
+        display.set_pen(CARD_BG)
+        card_text = WHITE
+        card_muted_pen = display.create_pen(140, 140, 155)
+    else:
+        display.set_pen(WHITE)
+        card_text = BLACK
+        card_muted_pen = display.create_pen(100, 100, 110)
     display.rectangle(card_x, int(y), card_w, h)
 
     # Accent dot (6px)
@@ -281,7 +298,7 @@ def draw_card(n, y, accent_colour):
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     _, _, tw, _ = vector.measure_text(rel, x=0, y=0)
-    display.set_pen(MUTED)
+    display.set_pen(card_muted_pen)
     vector.text(rel, card_x + card_w - CARD_PADDING_X - int(tw), title_y)
 
     # Title (sender/app name) -- left of time, right of dot
@@ -291,7 +308,7 @@ def draw_card(n, y, accent_colour):
     vector.set_font("Roboto-Medium.af", 28)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
-    display.set_pen(BLACK)
+    display.set_pen(card_text)
     vector.text(title, card_x + CARD_PADDING_X + 16, title_y)
 
     # Body text -- below title
@@ -301,7 +318,7 @@ def draw_card(n, y, accent_colour):
         vector.set_font("Roboto-Medium.af", 18)
         vector.set_font_letter_spacing(100)
         vector.set_font_word_spacing(100)
-        display.set_pen(BLACK)
+        display.set_pen(card_text)
         text_x = card_x + CARD_PADDING_X + 16
         max_chars = 34  # ~34 chars at size 18 on 480px wide
         line_count = 0
@@ -322,7 +339,8 @@ def draw_card(n, y, accent_colour):
 
 def draw_notifs():
     """Draw all notification cards."""
-    display.set_pen(DARK_BG)
+    bg_pen = CARD_BG if DARK_MODE else DARK_BG
+    display.set_pen(bg_pen)
     display.rectangle(0, HEADER_HEIGHT, WIDTH, HEIGHT - HEADER_HEIGHT)
 
     y = HEADER_HEIGHT + 6 - scroll_y
@@ -460,10 +478,16 @@ def main():
         touch = presto.touch
         touch.poll()
         touched = touch.state
+        tx = touch.x
         ty = touch.y
 
         if touched:
-            if last_touch_y is not None:
+            # Check for mode toggle button tap
+            if (last_touch_y is None and
+                MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
+                MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H):
+                DARK_MODE = not DARK_MODE
+            elif last_touch_y is not None:
                 delta = last_touch_y - ty
                 if abs(delta) > 2:
                     scroll_y = max(0, min(scroll_y + delta, max_scroll))
