@@ -106,10 +106,11 @@ server_host = None    # hostname from secrets.py
 
 # Light/dark mode
 DARK_MODE = False
-MODE_BTN_Y = 10
-MODE_BTN_X = 12
-MODE_BTN_W = 38
-MODE_BTN_H = 30
+MODE_BTN_Y = 6
+MODE_BTN_X = 6
+MODE_BTN_W = 42
+MODE_BTN_H = 36
+_mode_touched = False  # debounce: only toggle on first touch
 
 
 # ---------------------------------------------------------------------------
@@ -484,16 +485,21 @@ def main():
         ty = touch.y
 
         if touch.state:
-            # Mode toggle: tap in the button area while not scrolling
-            if last_touch_y is None and MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H:
+            in_btn = (MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
+                      MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H)
+            # Toggle mode: only fire once on initial press
+            if last_touch_y is None and in_btn and not _mode_touched:
                 DARK_MODE = not DARK_MODE
-            elif last_touch_y is not None:
+                _mode_touched = True
+            elif not in_btn and last_touch_y is not None:
+                # Scrolling
                 delta = last_touch_y - ty
                 if delta != 0:
                     scroll_y = max(0, min(scroll_y + delta, max_scroll))
             last_touch_y = ty
         else:
             last_touch_y = None
+            _mode_touched = False
 
         # --- Periodic poll ---
         if now - last_poll >= POLL_INTERVAL:
