@@ -29,12 +29,12 @@ POLL_INTERVAL = 5       # seconds between server polls
 MAX_DISPLAY = 10        # max notifications to fetch
 
 HEADER_HEIGHT = 52
-CARD_PADDING_X = 14
-CARD_PADDING_Y = 10
-CARD_SPACING = 6
-LINE_HEIGHT_APP = 20
-LINE_HEIGHT_BODY = 18
-LINE_HEIGHT_META = 16
+CARD_PADDING_X = 12
+CARD_PADDING_Y = 8
+CARD_SPACING = 4
+LINE_HEIGHT_APP = 22
+LINE_HEIGHT_BODY = 20
+LINE_HEIGHT_META = 18
 
 # ---------------------------------------------------------------------------
 # Hardware setup
@@ -58,6 +58,9 @@ DARK_BG     = display.create_pen(18, 18, 22)
 HEADER_BG   = display.create_pen(28, 28, 35)
 CARD_BG     = display.create_pen(38, 38, 48)
 ACCENT      = display.create_pen(88, 166, 255)
+
+CX = WIDTH // 2
+CY = HEIGHT // 2
 MUTED       = display.create_pen(140, 140, 155)
 SEPARATOR   = display.create_pen(55, 55, 65)
 
@@ -129,12 +132,12 @@ def calc_card_height(n):
     h += LINE_HEIGHT_APP
     h += 2                   # small gap after title
 
-    # Body text -- may wrap; estimate ~25 chars per line at font 15
+    # Body text -- may wrap; ~42 chars per line at font 14
     body = n.get("body", "")
     if body:
-        chars_per_line = max(1, (WIDTH - 2 * CARD_PADDING_X - 20) // 9)
-        n_lines = max(1, -(-len(body) // chars_per_line))  # ceil division
-        n_lines = min(n_lines, 4)  # cap at 4 lines
+        max_chars = 42
+        n_lines = max(1, -(-len(body) // max_chars))  # ceil division
+        n_lines = min(n_lines, 3)
         h += n_lines * LINE_HEIGHT_BODY
 
     # Meta line (app name + time)
@@ -182,16 +185,20 @@ def fetch_notifications():
     if not server_url:
         return None
     try:
+        gc.collect()
         url = "http://{}:{}/notifications".format(server_url, SERVER_PORT)
         resp = urequests.get(url, timeout=5)
         if resp.status_code == 200:
             data = resp.json()
             resp.close()
+            del resp
+            gc.collect()
             server_ok = True
             last_poll = time.time()
             return data
         else:
             resp.close()
+            del resp
             server_ok = False
             return None
     except Exception as e:
@@ -206,49 +213,41 @@ def fetch_notifications():
 
 def draw_header():
     """Draw the fixed header bar with title and clock."""
-    # Background
     display.set_pen(HEADER_BG)
     display.rectangle(0, 0, WIDTH, HEADER_HEIGHT)
 
-    # Title
-    vector.set_font("Roboto-Medium.af", 22)
-    vector.set_font_letter_spacing(0)
+    vector.set_font("Roboto-Medium.af", 20)
+    vector.set_font_letter_spacing(100)
+    vector.set_font_word_spacing(100)
     display.set_pen(WHITE)
-    vector.text("PrestoStatus", 14, 32)
+    vector.text("PrestoStatus", 12, 34)
 
-    # Clock — top right
+    # Clock -- top right
     try:
         t = time.localtime()
         time_str = "{:02d}:{:02d}".format(t[3], t[4])
     except Exception:
         time_str = "--:--"
-    vector.set_font("Roboto-Medium.af", 18)
-    _, _, tw, th = vector.measure_text(time_str, x=0, y=0)
+    vector.set_font("Roboto-Medium.af", 20)
+    _, _, tw, _ = vector.measure_text(time_str, x=0, y=0)
     display.set_pen(MUTED)
-    vector.text(time_str, WIDTH - int(tw) - 14, 30)
-
-    # Unread count badge
-    count_str = "{}".format(len(notifs))
-    if notifs:
-        vector.set_font("Roboto-Medium.af", 14)
-        _, _, cw, _ = vector.measure_text(count_str, x=0, y=0)
-        badge_x = WIDTH - int(tw) - 14 - int(cw) - 24
-        display.set_pen(ACCENT)
-        vector.text(count_str, badge_x, 28)
+    vector.text(time_str, WIDTH - int(tw) - 12, 34)
 
     # Bottom border
     display.set_pen(SEPARATOR)
-    display.rectangle(0, HEADER_HEIGHT - 1, WIDTH, 1)
+    display.rectangle(0, HEADER_HEIGHT - 2, WIDTH, 2)
 
 
 def draw_empty_state(msg):
     """Draw a centered message when there are no notifications."""
     display.set_pen(DARK_BG)
     display.rectangle(0, HEADER_HEIGHT, WIDTH, HEIGHT - HEADER_HEIGHT)
-    vector.set_font("Roboto-Medium.af", 18)
+    vector.set_font("Roboto-Medium.af", 16)
+    vector.set_font_letter_spacing(100)
+    vector.set_font_word_spacing(100)
     display.set_pen(MUTED)
     _, _, tw, th = vector.measure_text(msg, x=0, y=0)
-    vector.text(msg, (WIDTH - int(tw)) // 2, HEIGHT // 2)
+    vector.text(msg, (WIDTH - int(tw)) // 2, CY)
 
 
 def draw_card(n, y, accent_colour):
@@ -266,40 +265,47 @@ def draw_card(n, y, accent_colour):
     display.set_pen(dot_colour)
     display.circle(card_x + CARD_PADDING_X + 4, int(y) + CARD_PADDING_Y + 10, 5)
 
-    # Title (sender/app name) -- right of the dot
-    title = n.get("title", "Unknown")
-    if len(title) > 30:
-        title = title[:28] + "..."
-    vector.set_font("Roboto-Medium.af", 16)
-    display.set_pen(WHITE)
-    vector.text(title, card_x + CARD_PADDING_X + 16, int(y) + CARD_PADDING_Y + 16)
+    # Title row at top of card
+    title_y = int(y) + CARD_PADDING_Y + 16
 
-    # Relative time -- top right of card
+    # Relative time -- drawn first at top-right
     rel = relative_time(n.get("timestamp", 0))
-    vector.set_font("Roboto-Medium.af", 13)
+    vector.set_font("Roboto-Medium.af", 12)
+    vector.set_font_letter_spacing(100)
+    vector.set_font_word_spacing(100)
     _, _, tw, _ = vector.measure_text(rel, x=0, y=0)
     display.set_pen(MUTED)
-    vector.text(rel, card_x + card_w - CARD_PADDING_X - int(tw),
-                int(y) + CARD_PADDING_Y + 15)
+    vector.text(rel, card_x + card_w - CARD_PADDING_X - int(tw), title_y)
 
-    # Body text
-    text_y = int(y) + CARD_PADDING_Y + LINE_HEIGHT_APP + 4
+    # Title (sender/app name) -- left of time, right of dot
+    title = n.get("title", "Unknown")
+    if len(title) > 26:
+        title = title[:24] + "..."
+    vector.set_font("Roboto-Medium.af", 15)
+    vector.set_font_letter_spacing(100)
+    vector.set_font_word_spacing(100)
+    display.set_pen(WHITE)
+    vector.text(title, card_x + CARD_PADDING_X + 16, title_y)
+
+    # Body text -- below title
+    text_y = title_y + LINE_HEIGHT_APP + 2
     body = n.get("body", "")
     if body:
-        vector.set_font("Roboto-Medium.af", 15)
+        vector.set_font("Roboto-Medium.af", 14)
+        vector.set_font_letter_spacing(100)
+        vector.set_font_word_spacing(100)
         display.set_pen(WHITE)
-        # Manual word-wrap
-        chars_per_line = max(1, (card_w - 2 * CARD_PADDING_X - 4) // 9)
+        text_x = card_x + CARD_PADDING_X + 16
+        max_chars = 42  # ~42 chars at size 14 on 480px wide
         line_count = 0
-        while body and line_count < 4:
-            if len(body) <= chars_per_line:
-                vector.text(body, card_x + CARD_PADDING_X + 2, text_y)
+        while body and line_count < 3:
+            if len(body) <= max_chars:
+                vector.text(body, text_x, text_y)
                 break
-            # find a space to break on
-            split_at = body.rfind(" ", 0, chars_per_line)
-            if split_at == -1:
-                split_at = chars_per_line
-            vector.text(body[:split_at], card_x + CARD_PADDING_X + 2, text_y)
+            split_at = body.rfind(" ", 0, max_chars)
+            if split_at <= 0:
+                split_at = max_chars
+            vector.text(body[:split_at], text_x, text_y)
             body = body[split_at:].lstrip()
             text_y += LINE_HEIGHT_BODY
             line_count += 1
@@ -349,23 +355,13 @@ def draw_status(scr):
     display.set_pen(DARK_BG)
     display.clear()
 
-    display.set_pen(HEADER_BG)
-    display.rectangle(0, 0, WIDTH, HEADER_HEIGHT)
-
-    vector.set_font("Roboto-Medium.af", 22)
-    display.set_pen(WHITE)
-    vector.text("PrestoStatus", 14, 32)
-
     draw_header()
 
-    display.set_pen(DARK_BG)
-    display.rectangle(0, HEADER_HEIGHT, WIDTH, HEIGHT - HEADER_HEIGHT)
-
-    # Status message
+    # Status message, centered below header
     vector.set_font("Roboto-Medium.af", 20)
     display.set_pen(WHITE)
     _, _, tw, th = vector.measure_text(scr, x=0, y=0)
-    vector.text(scr, (WIDTH - int(tw)) // 2, HEIGHT // 2)
+    vector.text(scr, (WIDTH - int(tw)) // 2, HEADER_HEIGHT + 80)
 
     presto.update()
 
