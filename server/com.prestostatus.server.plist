@@ -2,29 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>com.prestostatus.server</string>
+    <dict>
+        <key>Label</key>
+        <string>com.prestostatus.server</string>
 
-	<key>ProgramArguments</key>
-	<array>
-		<string>/usr/bin/python3</string>
-		<string>server.py</string>
-	</array>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/usr/bin/python3</string>
+            <string>server.py</string>
+        </array>
 
-	<key>WorkingDirectory</key>
-	<string>/Users/dd/Documents/GitHub/PrestoStatus/server</string>
+        <key>WorkingDirectory</key>
+        <string>/Users/dd/Documents/GitHub/PrestoStatus/server</string>
 
-	<key>RunAtLoad</key>
-	<true/>
+        <key>RunAtLoad</key>
+        <true/>
 
-	<key>KeepAlive</key>
-	<true/>
+        <key>KeepAlive</key>
+        <true/>
 
-	<key>StandardOutPath</key>
-	<string>/tmp/prestostatus.stdout.log</string>
+        <key>StandardOutPath</key>
+        <string>/tmp/prestostatus.stdout.log</string>
 
-	<key>StandardErrorPath</key>
-	<string>/tmp/prestostatus.stderr.log</string>
-</dict>
+        <key>StandardErrorPath</key>
+        <string>/tmp/prestostatus.stderr.log</string>
+    </dict>
 </plist>

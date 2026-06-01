@@ -20,7 +20,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 DB_PATH = os.path.expanduser(
-    "~/Library/Group Containers/group.com.apple.usernoted/db2/db2"
+    "~/Library/Group Containers/group.com.apple.usernoted/db2/db"
 )
 SERVER_PORT = 8080
 MAX_NOTIFICATIONS = 10
@@ -53,10 +53,11 @@ def read_notifications(limit: int = MAX_NOTIFICATIONS) -> list[dict]:
     try:
         cursor = conn.execute(
             """
-            SELECT app, uuid, data, presented, delivered_date
-            FROM record
-            WHERE presented = 1
-            ORDER BY delivered_date DESC
+            SELECT a.identifier, r.uuid, r.data, r.delivered_date
+            FROM record r
+            JOIN app a ON r.app_id = a.app_id
+            WHERE r.presented = 1
+            ORDER BY r.delivered_date DESC
             LIMIT ?
             """,
             (limit,),
@@ -64,20 +65,22 @@ def read_notifications(limit: int = MAX_NOTIFICATIONS) -> list[dict]:
 
         notifications: list[dict] = []
         for row in cursor:
-            app_id = row["app"]
-            raw_data = row["data"]
-            delivered = row["delivered_date"] if row["delivered_date"] else 0
+            app_identifier = row[0] or "unknown"
+            raw_data = row[2]
+            delivered = row[3] if row[3] else 0
 
             title = ""
             body = ""
             if raw_data:
                 try:
                     plist = plistlib.loads(raw_data)
-                    title = plist.get("titl", "") or plist.get("title", "")
-                    body = plist.get("body", "")
-                    # Fallback: some apps use 'titl' differently
+                    req = plist.get("req", {})
+                    # title/body live inside the 'req' sub-dict
+                    title = req.get("titl", "") or req.get("title", "")
+                    body = req.get("body", "")
+                    # Fallback: derive a readable name from the bundle ID
                     if not title:
-                        title = app_id.rsplit(".", 1)[-1]
+                        title = app_identifier.rsplit(".", 1)[-1]
                 except Exception:
                     pass
 
@@ -86,9 +89,9 @@ def read_notifications(limit: int = MAX_NOTIFICATIONS) -> list[dict]:
 
             notifications.append(
                 {
-                    "app": app_id,
-                    "title": title,
-                    "body": body,
+                    "app": app_identifier,
+                    "title": title.strip(),
+                    "body": body.strip(),
                     "timestamp": ts,
                 }
             )
