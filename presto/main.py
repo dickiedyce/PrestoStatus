@@ -528,7 +528,10 @@ def main():
             draw_notifs()
 
         draw_header()
-        presto.update()
+        # Push framebuffer to display. We don't use presto.update() because
+        # its internal touch.poll() would double-poll and consume touch state.
+        presto.presto.update(presto.display)
+        # Single touch.poll() at TOP of next frame handles everything.
 
         # --- Yield ---
         time.sleep_ms(50)
