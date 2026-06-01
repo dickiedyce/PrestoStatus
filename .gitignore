@@ -1,4 +1,5 @@
-server/__pycache__/
+__pycache__/
 *.pyc
 .DS_Store
 presto/secrets.py
+*.egg-info/

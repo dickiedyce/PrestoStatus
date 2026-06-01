@@ -60,11 +60,11 @@ Returns JSON array, most recent first:
 
 ## Configuration
 
-| Setting | Where | Description |
-|---------|-------|-------------|
-| `WIFI_SSID` | `presto/secrets.py` | WiFi network name |
-| `WIFI_PASSWORD` | `presto/secrets.py` | WiFi password |
-| `SERVER_HOST` | `presto/secrets.py` | Mac hostname (`.local`) |
-| `SERVER_PORT` | `server/server.py` | Server port (default `8080`) |
-| `POLL_INTERVAL` | `presto/main.py` | Seconds between polls (default `5`) |
-| `MAX_NOTIFICATIONS` | `server/server.py` | Max notifications to serve (default `10`) |
+| Setting             | Where               | Description                               |
+| ------------------- | ------------------- | ----------------------------------------- |
+| `WIFI_SSID`         | `presto/secrets.py` | WiFi network name                         |
+| `WIFI_PASSWORD`     | `presto/secrets.py` | WiFi password                             |
+| `SERVER_HOST`       | `presto/secrets.py` | Mac hostname (`.local`)                   |
+| `SERVER_PORT`       | `server/server.py`  | Server port (default `8080`)              |
+| `POLL_INTERVAL`     | `presto/main.py`    | Seconds between polls (default `5`)       |
+| `MAX_NOTIFICATIONS` | `server/server.py`  | Max notifications to serve (default `10`) |
