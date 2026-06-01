@@ -127,6 +127,7 @@ def read_touch():
     """Read FT6236 directly via I2C, returns (x, y, touched).
     Bypasses the driver to avoid the poll/reset race with presto.update()."""
     try:
+        _touch_i2c.writeto(_TOUCH_ADDR, b"\x00", False)
         _touch_i2c.readfrom_into(_TOUCH_ADDR, _touch_buf)
     except OSError:
         return 0, 0, False
@@ -503,30 +504,13 @@ def main():
     max_scroll = max(0, total_height - visible_height)
 
     # -- Main event loop --
+    # Strategy: draw → presto.update() (pushes display + calls touch.poll()),
+    # then read touch state from the driver (just updated by that poll).
+    # Process touch for scrolling on the NEXT draw.
     while True:
         now = time.time()
 
-        # --- Touch input (direct I2C read, no driver involvement) ---
-        tx, ty, touched = read_touch()
-
-        if touched:
-            in_btn = (MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
-                      MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H)
-            # Toggle mode: only fire once on initial press
-            if last_touch_y is None and in_btn and not _mode_touched:
-                DARK_MODE = not DARK_MODE
-                _mode_touched = True
-            elif not in_btn and last_touch_y is not None:
-                # Scrolling
-                delta = last_touch_y - ty
-                if delta != 0:
-                    scroll_y = max(0, min(scroll_y + delta, max_scroll))
-            last_touch_y = ty
-        else:
-            last_touch_y = None
-            _mode_touched = False
-
-        # --- Periodic poll ---
+        # --- Periodic server poll ---
         if now - last_poll >= POLL_INTERVAL:
             result = fetch_notifications()
             if result is not None:
@@ -550,8 +534,36 @@ def main():
         else:
             draw_notifs()
 
+        # Debug overlay
+        display.set_pen(BLACK)
+        display.rectangle(0, HEIGHT - 24, WIDTH, 24)
+        vector.set_font("Roboto-Medium.af", 14)
+        display.set_pen(ACCENT)
+        vector.text("scr={:.0f} max={:.0f}".format(scroll_y, max_scroll), 8, HEIGHT - 6)
+
         draw_header()
+
+        # Push display + touch poll (presto.update() calls touch.poll() internally)
         presto.update()
+
+        # --- Read touch state (fresh from presto.update()'s internal poll) ---
+        tx = presto.touch.x
+        ty = presto.touch.y
+
+        if presto.touch.state:
+            in_btn = (MODE_BTN_X <= tx <= MODE_BTN_X + MODE_BTN_W and
+                      MODE_BTN_Y <= ty <= MODE_BTN_Y + MODE_BTN_H)
+            if last_touch_y is None and in_btn and not _mode_touched:
+                DARK_MODE = not DARK_MODE
+                _mode_touched = True
+            elif not in_btn and last_touch_y is not None:
+                delta = last_touch_y - ty
+                if delta != 0:
+                    scroll_y = max(0, min(scroll_y + delta, max_scroll))
+            last_touch_y = ty
+        else:
+            last_touch_y = None
+            _mode_touched = False
 
 
 # ---------------------------------------------------------------------------
