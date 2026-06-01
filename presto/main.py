@@ -104,6 +104,13 @@ touch_prev_state = False
 server_url = None     # resolved server IP
 server_host = None    # hostname from secrets.py
 
+# Light/dark mode
+DARK_MODE = False
+MODE_BTN_Y = 10
+MODE_BTN_X = WIDTH - 50
+MODE_BTN_W = 38
+MODE_BTN_H = 30
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -256,8 +263,8 @@ def draw_card(n, y, accent_colour):
     card_x = 8
     card_w = WIDTH - 16
 
-    # Card background
-    display.set_pen(CARD_BG)
+    # Card background -- inverted (white)
+    display.set_pen(WHITE)
     display.rectangle(card_x, int(y), card_w, h)
 
     # Accent dot (6px)
@@ -270,7 +277,7 @@ def draw_card(n, y, accent_colour):
 
     # Relative time -- drawn first at top-right
     rel = relative_time(n.get("timestamp", 0))
-    vector.set_font("Roboto-Medium.af", 14)
+    vector.set_font("Roboto-Medium.af", 18)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
     _, _, tw, _ = vector.measure_text(rel, x=0, y=0)
@@ -284,7 +291,7 @@ def draw_card(n, y, accent_colour):
     vector.set_font("Roboto-Medium.af", 28)
     vector.set_font_letter_spacing(100)
     vector.set_font_word_spacing(100)
-    display.set_pen(WHITE)
+    display.set_pen(BLACK)
     vector.text(title, card_x + CARD_PADDING_X + 16, title_y)
 
     # Body text -- below title
@@ -294,7 +301,7 @@ def draw_card(n, y, accent_colour):
         vector.set_font("Roboto-Medium.af", 18)
         vector.set_font_letter_spacing(100)
         vector.set_font_word_spacing(100)
-        display.set_pen(WHITE)
+        display.set_pen(BLACK)
         text_x = card_x + CARD_PADDING_X + 16
         max_chars = 34  # ~34 chars at size 18 on 480px wide
         line_count = 0
@@ -458,18 +465,11 @@ def main():
         if touched:
             if last_touch_y is not None:
                 delta = last_touch_y - ty
-                if abs(delta) > 0:
-                    scroll_target += delta * 1.5
-                    scroll_target = max(0, min(scroll_target, max_scroll))
+                if abs(delta) > 2:
+                    scroll_y = max(0, min(scroll_y + delta, max_scroll))
             last_touch_y = ty
         else:
             last_touch_y = None
-
-        # --- Smooth scroll lerp ---
-        if abs(scroll_target - scroll_y) > 0.5:
-            scroll_y += (scroll_target - scroll_y) * 0.4
-        else:
-            scroll_y = scroll_target
 
         # --- Periodic poll ---
         if now - last_poll >= POLL_INTERVAL:
