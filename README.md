@@ -18,9 +18,12 @@ PrestoStatus is a two-component system:
 Requires **Full Disk Access** granted to your terminal app (or the launch agent).
 
 ```bash
-# Test it
+# Test it (default port 8080)
 cd server
 python3 server.py
+
+# Or choose a custom port
+PRESTO_PORT=8090 python3 server.py
 
 # Install as launch agent (auto-starts at login)
 cd server && ./install.sh
@@ -37,12 +40,13 @@ Create a `secrets.py` on the Presto:
 WIFI_SSID = "Your Network"
 WIFI_PASSWORD = "Your Password"
 SERVER_HOST = "mac-mini.local"  # your Mac's .local hostname
+SERVER_PORT = 8080               # optional, must match server
 ```
 
 ## API
 
-```
-GET http://<SERVER_HOST>:8080/notifications
+```text
+GET http://<SERVER_HOST>:<SERVER_PORT>/notifications
 ```
 
 Returns JSON array, most recent first:
@@ -65,6 +69,7 @@ Returns JSON array, most recent first:
 | `WIFI_SSID`         | `presto/secrets.py` | WiFi network name                         |
 | `WIFI_PASSWORD`     | `presto/secrets.py` | WiFi password                             |
 | `SERVER_HOST`       | `presto/secrets.py` | Mac hostname (`.local`)                   |
-| `SERVER_PORT`       | `server/server.py`  | Server port (default `8080`)              |
+| `SERVER_PORT`       | `presto/secrets.py` | Presto client port (default `8080`)       |
+| `PRESTO_PORT`       | env var             | Server port (default `8080`)              |
 | `POLL_INTERVAL`     | `presto/main.py`    | Seconds between polls (default `5`)       |
 | `MAX_NOTIFICATIONS` | `server/server.py`  | Max notifications to serve (default `10`) |

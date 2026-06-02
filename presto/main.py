@@ -24,7 +24,7 @@ from presto import Presto
 # Config
 # ---------------------------------------------------------------------------
 
-SERVER_PORT = 8080
+SERVER_PORT = 8080  # override via secrets.py SERVER_PORT
 POLL_INTERVAL = 30  # seconds between server polls
 MAX_DISPLAY = 10        # max notifications to fetch
 
@@ -431,6 +431,7 @@ def draw_status(scr):
 def main():
     global notifs, scroll_y, max_scroll
     global server_ok, wifi_ok, last_touch_y, touch_prev_state, server_url
+    global SERVER_PORT
 
     # -- LED startup indicator --
     set_leds_purple()
@@ -454,6 +455,14 @@ def main():
         draw_status("SERVER_HOST is empty\nin secrets.py")
         while True:
             time.sleep(60)
+
+    # Read optional SERVER_PORT from secrets.py (overrides default 8080)
+    try:
+        from secrets import SERVER_PORT as _port
+        if _port is not None:
+            SERVER_PORT = _port
+    except (ImportError, AttributeError):
+        pass
 
     # -- Connect to WiFi --
     try:
