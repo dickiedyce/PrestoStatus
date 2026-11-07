@@ -22,10 +22,10 @@ from pathlib import Path
 DB_PATH = os.path.expanduser(
     "~/Library/Group Containers/group.com.apple.usernoted/db2/db"
 )
-SERVER_PORT = int(os.environ.get("PRESTO_PORT", 8080))
-MAX_NOTIFICATIONS = 10
-MAX_AGE_HOURS = 24   # only return notifications from the last N hours
-POLL_INTERVAL = 2  # seconds
+SERVER_PORT = int(os.environ.get("PRESTO_PORT", 8090)) # HTTP port to listen on
+MAX_NOTIFICATIONS = int(os.environ.get("PRESTO_MAX_NOTIFICATIONS", 20)) # max number of notifications to return in one request
+MAX_AGE_HOURS = int(os.environ.get("PRESTO_MAX_AGE_HOURS", 24)) # only return notifications from the last N hours
+POLL_INTERVAL = int(os.environ.get("PRESTO_POLL_INTERVAL", 2)) # seconds
 
 # ---------------------------------------------------------------------------
 # Notification reader
